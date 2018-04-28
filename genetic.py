@@ -2,7 +2,8 @@
 #
 # Authors: Caleb Sutton & Lyubov Sidlinskaya
 
-
+# Imports
+import sys
 
 ###############################################################################
 # This is just a quick skeleton I typed up, we will probably have to make some
@@ -29,15 +30,15 @@
 #
 def artificial_selection(population, puzzle, num_generations, pop_size):
 
-     for i in range(num_generations):
-          for i in range(population_size/2):
-               population.append(crossover(select_parents(population))) # this will probably throw an error, can you pass arguments as a tuple??
-          while(len(population) != pop_size) # this is definetly throwing an error
-               kill_unfit(population)
+    #  for i in range(num_generations):
+    #       for i in range(population_size/2):
+    #            population.append(crossover(select_parents(population))) # this will probably throw an error, can you pass arguments as a tuple??
+    #       while(len(population) != pop_size) # this is definetly throwing an error
+    #            kill_unfit(population)
 
      # determine most fit chomosome
 
-     return most_fit
+    return most_fit
 
 
 
@@ -78,7 +79,7 @@ def crossover(parent1, parent2):
 
 # Function which randomly decides whether or not to alter
 # one of the chromosomes alleles. Should only happen rarely
-def mutate(chromosome)
+def mutate(chromosome):
      # ToDo
 
      return false
@@ -111,24 +112,38 @@ def create_random_population(puzzle, pop_size):
 
 # function which reads the input file and returns an array
 # of all the puzzles
-def read_input_file(file_path):
-     # ToDo
-     puzzles = []
+def read_data(input_file):
+    list_table =[]
+    try:
+        with open(input_file, "r") as data_file:
+            for line in data_file:
+                item = line.split() #  removes EOL marker
+                item = list(map(int, item))
+                list_table.append(item)
 
-     return puzzles
+        return (list_table)
 
-
+    # Throw error if issue reading file.
+    except IOError:
+        print ("Error reading file.", input_file_name)
+        sys.exit()
 
 # function which calls artificial_selection() and dynamic_programming()
 # for each puzzle and prints the results to the console
 def main():
-     # ToDo
-
-     # read input
-
+ 
      # for each puzzle call artificial_selection() and dynamic_programming()
      #    and print the results
-
+    if len(sys.argv) > 1:
+        input_file_name = sys.argv[1]                    # Accepts filename as cmd line argument
+        input_table = read_data(input_file_name) 
+        for line in input_table:
+            # Send to function
+            print (line)
+            #genetic_algorithm(line)    
+    else:
+        print ("Please enter the correct cmd line arguments in the format:")
+        print ("python genetic.py input1.txt")
 
 
 main()
