@@ -51,7 +51,6 @@ def kill_unfit(population):
 
 
 
-
 # Function whcih chooses two parents from a population
 # based on ***selection mechanism***
 #
