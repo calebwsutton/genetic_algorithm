@@ -4,6 +4,10 @@
 
 # Imports
 import sys
+import random
+# import jump_it_DP
+
+
 
 ###############################################################################
 # This is just a quick skeleton I typed up, we will probably have to make some
@@ -41,7 +45,6 @@ def artificial_selection(population, puzzle, num_generations, pop_size):
     return most_fit
 
 
-
 # Function which chooses a chromosome using the ***selection mechanism***
 # and removes it from the population
 def kill_unfit(population):
@@ -61,7 +64,6 @@ def select_parents(population):
      return(parent1, parent2)
 
 
-
 # Function which creates an offspring using the alleles of 
 # parent1 and parent2, also determines the fitness of the 
 # offspring and returns the representative dictionary
@@ -75,7 +77,6 @@ def crossover(parent1, parent2):
      return offspring
 
 
-
 # Function which randomly decides whether or not to alter
 # one of the chromosomes alleles. Should only happen rarely
 def mutate(chromosome):
@@ -84,30 +85,69 @@ def mutate(chromosome):
      return false
 
 
-
 # function which returns the the fitness of an array of
 # of alleles using the ***fitness function***
 def get_fitness(alleles, puzzle):
-     # ToDo
-     # Probably a one liner
+    board = puzzle[1:]
+    fittness_count = 0
 
-     return fitness
-
+    for i in range(len(alleles)):
+        if alleles[i] == 1:
+            fittness_count += board[i] 
+    return fittness_count
 
 
 # function whcih generates a population of chromosomes
 # of size pop_size and populates the alleles of each
 # chromosome
-def create_random_population(puzzle, pop_size):
+def create_random_population(puzzle):
      # ToDo
-     population = []
+    population = []
+    pop_item_length = len(puzzle) -2
+    pop_size = 50
 
-     # create list of chromosomes
-     # {alleles: [], fitness: int(total cost)}
+    for length in range(pop_size):
+        chrom = []
+        for i in range(pop_item_length):
+            bit = random.randint(0,1)
+            if (i > 0 and bit == 0):
+                if chrom[i-1] == 0:
+                    chrom.append(1)
+                else:
+                    chrom.append(bit)
+            else:
+                chrom.append(bit)
 
-     return population
+        if chrom in population:
+            continue
+        else:
+            population.append(chrom)
 
+    print ("\nChromosome:     Fitness:")
 
+    for item in population:
+        item.append(1)      # The last place in the bitstring is always visited
+        fitness = get_fitness(item, puzzle)
+
+        #Not actually saving the fitness value, just printing.
+        print (item, fitness)
+        
+    # create list of chromosomes
+    # {alleles: [], fitness: int(total cost)}
+    # print (population)
+    return population
+
+def print_data():
+
+    # global cost, path
+    #     cost = [0] * len(lyst) #create the cache table
+    #     path = cost[:] # create a table for path that is identical to path
+    #     min_cost = jump_it_DP.jumpIt(lyst)
+    #     print("game board:", lyst)
+    #     print("cost: ", min_cost)
+    #     displayPath(lyst)
+    #     print("___________________________")
+    return True
 
 # function which reads the input file and returns an array
 # of all the puzzles
@@ -137,9 +177,8 @@ def main():
         input_file_name = sys.argv[1]                    # Accepts filename as cmd line argument
         input_table = read_data(input_file_name) 
         for line in input_table:
-            # Send to function
-            print (line)
-            #genetic_algorithm(line)    
+            pop = create_random_population(line)
+
     else:
         print ("Please enter the correct cmd line arguments in the format:")
         print ("python genetic.py input1.txt")
