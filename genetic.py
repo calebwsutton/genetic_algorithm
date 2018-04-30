@@ -5,7 +5,7 @@
 # Imports
 import sys
 import random
-# import jump_it_DP
+import jump_it_DP
 
 
 
@@ -35,7 +35,6 @@ import random
 def artificial_selection(population, puzzle, num_generations, pop_size):
 
 	for i in range(num_generations):
-		#print('Generation: ' + str(i))
 		for _ in range(pop_size//2): # increase population by 50%
 			parent1, parent2 = select_parents(population)
 			#print(parent1)
@@ -77,6 +76,7 @@ def kill_unfit(population):
 	for chrom in selection_pool:
 		if selector >= chrom['window'][0] and selector < chrom['window'][1]:
 			population.remove(chrom['chromosome'])
+			break
 
 	return True
 
@@ -204,10 +204,9 @@ def get_fitness(alleles, puzzle):
 # function whcih generates a population of chromosomes
 # of size pop_size and populates the alleles of each
 # chromosome
-def create_random_population(puzzle):
+def create_random_population(puzzle, pop_size):
 	population = []
 	pop_item_length = len(puzzle) -2
-	pop_size = 50
 
 	random.seed()
 
@@ -247,16 +246,18 @@ def create_random_population(puzzle):
 
 	return population
 
-def print_data():
-
-	# global cost, path
-	#     cost = [0] * len(lyst) #create the cache table
-	#     path = cost[:] # create a table for path that is identical to path
-	#     min_cost = jump_it_DP.jumpIt(lyst)
-	#     print("game board:", lyst)
-	#     print("cost: ", min_cost)
-	#     displayPath(lyst)
-	#     print("___________________________")
+def print_path(puzzle, alleles):
+	i = 1
+	print('path showing indices of visited cells: 0', end = "")
+	path_contents = '0'
+	for bit in alleles:
+		if bit == 1:
+			print(' -> ' + str(i), end = "")
+			path_contents += ' -> ' + str(puzzle[i])
+		i += 1
+	
+	print('\npath showing contents of visited cells: ' + path_contents)
+	
 	return True
 
 # function which reads the input file and returns an array
@@ -284,11 +285,36 @@ def main():
 	# for each puzzle call artificial_selection() and dynamic_programming()
 	#    and print the results
 	if len(sys.argv) > 1:
+		# global cost, path
+
 		input_file_name = sys.argv[1]                    # Accepts filename as cmd line argument
 		input_table = read_data(input_file_name)
 		for puzzle in input_table:
-			print('\nPuzzle:\t\t\t' + str(puzzle))
-			print('Genetic Solution:\t' + str([1] + artificial_selection(create_random_population(puzzle), puzzle, 25, 100)['alleles']))
+			print('\n\nGame Board: ' + str(puzzle))
+
+
+
+
+			print('________________________________________\nDP Solution')
+			cost = [0] * len(puzzle) #create the cache table
+			path = cost[:] # create a table for path that is identical to path
+			min_cost = jump_it_DP.jumpIt(puzzle, cost, path)
+			print("cost: ", min_cost)
+			jump_it_DP.displayPath(puzzle, path)
+
+
+
+
+			print('________________________________________\nGA Solution')
+			pop_size = 2 ** (len(puzzle) - 2)
+			if pop_size > 512:
+				pop_size = 512
+			most_fit = artificial_selection(create_random_population(puzzle, pop_size), puzzle, 25, pop_size)
+			print('Cost: ' + str(most_fit['fitness']))
+			print_path(puzzle, most_fit['alleles'])
+
+			print('========================================')
+			
 
 	else:
 		print ("Please enter the correct cmd line arguments in the format:")

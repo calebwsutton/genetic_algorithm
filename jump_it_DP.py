@@ -5,9 +5,9 @@ to the cheapest cost
 """
 global cost, path
 
-cost = [] # global table to cache results - cost[i] stores minimum cost of playing the game starting at cell i
-path = [] #global table to store path leading to cheapest cost
-def jumpIt(board):
+# cost = [] # global table to cache results - cost[i] stores minimum cost of playing the game starting at cell i
+# path = [] #global table to store path leading to cheapest cost
+def jumpIt(board, cost, path):
     #Bottom up dynamic programming implementation
     #board - list with cost associated with visiting each cell
     #return minimum total cost of playing game starting at cell 0
@@ -28,7 +28,7 @@ def jumpIt(board):
             path[i] = i + 2 #so from cell i, one jumps over cell
     return cost[0]
 
-def displayPath(board):
+def displayPath(board, path):
     #Display path leading to cheapest cost - method displays indices of cells visited
     #path - global list where path[i] indicates the cell to move to from cell i
     cell = 0 # start path at cell 0
