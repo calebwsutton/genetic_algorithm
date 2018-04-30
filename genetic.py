@@ -40,7 +40,7 @@ def artificial_selection(population, puzzle, num_generations, pop_size):
     #       while(len(population) != pop_size) # this is definetly throwing an error
     #            kill_unfit(population)
 
-     # determine most fit chomosome
+    # determine most fit chomosome
 
     return most_fit
 
@@ -48,20 +48,55 @@ def artificial_selection(population, puzzle, num_generations, pop_size):
 # Function which chooses a chromosome using the ***selection mechanism***
 # and removes it from the population
 def kill_unfit(population):
-     # ToDo
+     total_cost = 0
 
-     return true
+     return True
 
 
 
 # Function whcih chooses two parents from a population
-# based on ***selection mechanism***
+# based on roulette wheel selection mechanism
 #
 # Note: for bonus we can implement multiple selection methods
 def select_parents(population):
-     # ToDo
+    total_fitness = 0
+    selection_pool = []
 
-     return(parent1, parent2)
+    random.seed()
+
+    for chrom in population:
+        total_fitness += 1 / chrom['fitness'] # find the total fitness of the population
+
+    previous_chance = 0
+    for chrom in population:
+        chance = (1/chrom['fitness']) / total_fitness # this is the percentage chance each chromosome will be selected
+        selection_pool.append({'chance': chance, 'chromosome': chrom,'window': [previous_chance, previous_chance + chance]})    # each chromosome is given a window to get selected that lies somewhere in the range of 0 - 1. 
+                                                                                                                                # The windows should not overlap and each should be proportional to the chance of getting
+                                                                                                                                # selected, so that when a random float is generated bewteen 0 - 1 it will fall into the window of
+                                                                                                                                # one of the chromosomes in the selection pool.
+
+                                                                                                                                # ie one might be 0.0 - 0.2, the next might be 0.2 - 0.21, then 0.21-0.7, etc......
+                                                                                                                                
+        previoius_chance += chance
+
+
+    selector1 = random.uniform(0, 1)    # generate a random number that will choose a parent
+    selector2 = random.uniform(0, 1) 
+
+    # 
+    for chrom in selection_pool:
+        if selector1 > chrom['window'][0] and selector1 < chrom['window'][1]:
+            while selector2 > chrom['window'][0] and selector2 < chrom['window'][1]:    # as long as the second selector fall with in the selection of range of the first parent generate a new random selector
+                                                                                        # the point of this is so both of the parents arent the same chromosome
+                selector2 = random.uniform(0,1)
+            parent1 = selection_pool.pop(chrom)
+
+    for chrom in selection_pool:
+        if selector2 > chrom['window'][0] and selector2 < chrom['window'][1]:
+            parent2 = selection_pool.pop(chrom)
+
+
+    return(parent1, parent2)
 
 
 # Function which creates an offspring using the alleles of 
@@ -82,7 +117,7 @@ def crossover(parent1, parent2):
 def mutate(chromosome):
      # ToDo
 
-     return false
+     return False
 
 
 # function which returns the the fitness of an array of
@@ -93,7 +128,8 @@ def get_fitness(alleles, puzzle):
 
     for i in range(len(alleles)):
         if alleles[i] == 1:
-            fittness_count += board[i] 
+            fittness_count += board[i]
+            
     return fittness_count
 
 
@@ -101,40 +137,46 @@ def get_fitness(alleles, puzzle):
 # of size pop_size and populates the alleles of each
 # chromosome
 def create_random_population(puzzle):
-     # ToDo
     population = []
     pop_item_length = len(puzzle) -2
     pop_size = 50
 
+    random.seed()
+
     for length in range(pop_size):
-        chrom = []
+        chrom = {'alleles' : [], 'fitness': 0}
         for i in range(pop_item_length):
             bit = random.randint(0,1)
             if (i > 0 and bit == 0):
                 if chrom[i-1] == 0:
-                    chrom.append(1)
+                    chrom['alleles'].append(1)
                 else:
-                    chrom.append(bit)
+                    chrom['alleles'].append(bit)
             else:
-                chrom.append(bit)
+                chrom['alleles'].append(bit)
 
-        if chrom in population:
-            continue
-        else:
-            population.append(chrom)
+        chrom['alleles'].append(1) # The last place in the bitstring is always visited
 
-    print ("\nChromosome:     Fitness:")
+        # if chrom in population:
+        #     continue
+        # else:
 
-    for item in population:
-        item.append(1)      # The last place in the bitstring is always visited
-        fitness = get_fitness(item, puzzle)
+        chrom['fitness'] = get_fitness(chrom['alleles'], puzzle)
+        population.append(chrom)
 
-        #Not actually saving the fitness value, just printing.
-        print (item, fitness)
+    # print ("\nChromosome:     Fitness:")
+
+    # for item in population:
+    #     item.append(1)      # The last place in the bitstring is always visited
+    #     fitness = get_fitness(item, puzzle)
+
+    #     #Not actually saving the fitness value, just printing.
+    #     print (item, fitness)
         
     # create list of chromosomes
     # {alleles: [], fitness: int(total cost)}
     # print (population)
+
     return population
 
 def print_data():
