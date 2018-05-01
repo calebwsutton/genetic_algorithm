@@ -8,24 +8,35 @@ import random
 import jump_it_DP
 import time
 
+# Global Values Used to Tune Genetic Algorithm
+MAX_GENERATIONS = 100
+MIN_GENERATIONS = 5
+MUTATION_RATE = 0.5 # Probability of mutation
+CROSSOVER_RATE = 0.999 # Probability of crossover
+INITIAL_POP_SIZE = 512 # Size of each population initially
+MAX_POP_SIZE = 128 # Largest value accepted as working population size
+STAGNATION_RATE = 0.80
+MAX_AGE = 1 # Largest number of generations a 
+
 # Main function executing the genetic algorithm for each puzzle
 # should return the most fit chromosome after a specified number
 # of generations
-def artificial_selection(population, puzzle, max_generations, min_generations, pop_size):
-	generation_num = 1
+def artificial_selection(population, puzzle, pop_size):
+	generation_num = 0
 	fitness_streak = 0
+	stagnation = 0
 	current_most_fit = population[0]
 	previous_most_fit = population[0]
-	while generation_num <= max_generations and (generation_num <= min_generations or (fitness_streak/generation_num) < 0.5):
+	while (generation_num < MAX_GENERATIONS) and ((generation_num < MIN_GENERATIONS) or (stagnation < STAGNATION_RATE)):
+		generation_num += 1
 		previous_most_fit = current_most_fit
 		new_generation = []
 		for _ in range(pop_size//2): # double population
 			parent1, parent2 = select_parents(population)
-			new_generation.append(crossover(parent1, parent2, puzzle))
-			new_generation.append(crossover(parent2, parent1, puzzle))
+			new_generation += crossover(parent1, parent2, puzzle, generation_num)
 		population = population + new_generation
-		while len(population) != pop_size:
-			reduce_pop(population)
+		while len(population) > pop_size:
+			reduce_pop(population, generation_num)
 
 
 		for chromosome in population:
@@ -35,22 +46,25 @@ def artificial_selection(population, puzzle, max_generations, min_generations, p
 		if current_most_fit['fitness'] == previous_most_fit['fitness']:
 			fitness_streak += 1
 
-		generation_num += 1
+		stagnation = fitness_streak/generation_num
 
-	#print('Total Generations: ' + str(generation_num - 1))
+	print('Total Generations: ' + str(generation_num))
+	print('Stagnation : ' + str(stagnation))
 
 	return current_most_fit
 
 
 # Function which chooses a chromosome using the roulette wheel
 # selection mechanism and removes it from the population
-def reduce_pop(population):
+def reduce_pop(population, generation_num):
 	total_cost = 0
 	selection_pool = []
 
 	random.seed()
 
 	for chrom in population:
+		if (generation_num - chrom['DOB']) > MAX_AGE:
+			population.remove(chrom)
 		total_cost += chrom['fitness']
 
 	previous_chance = 0
@@ -110,41 +124,58 @@ def select_parents(population):
 	return(parent1, parent2)
 
 
-# Function which creates an offspring using the alleles of 
+# Function which creates two offspring using the alleles of 
 # parent1 and parent2, also determines the fitness of the 
 # offspring and returns the representative dictionary
 # {alleles: [], fitness: (total cost)}
 #
 # Note: need to be careful about bug which could produce
 #    a chromosome with consecutive 0s
-def crossover(parent1, parent2, puzzle):
-	cross_point = random.randint(0, len(parent1['alleles']) - 2)
-	offspring = {'alleles': [], 'fitness': 0}
+def crossover(parent1, parent2, puzzle, generation_num):
+	random.seed()
+	crossover_test = random.uniform(0, 1)
+	child_1 = {'alleles': [], 'fitness': 0, 'DOB': generation_num}
+	child_2 = {'alleles': [], 'fitness': 0, 'DOB': generation_num}
 
-	while (parent1['alleles'][cross_point] == 0 and parent2['alleles'][cross_point + 1] == 0): # generate a new cross point as long as 
-		cross_point = random.randint(0, len(parent1['alleles']) - 2)
+	cross_points = []
+	for i in range(len(parent1['alleles']) - 1):
+		if ((parent1['alleles'][i] == 0 and parent2['alleles'][i + 1] == 0) or (parent2['alleles'][i] == 0 and parent1['alleles'][i + 1] == 0)) == False:
+			cross_points.append(i)
+	
+	#print(cross_points)
+	
+	if len(cross_points) == 0 or crossover_test > CROSSOVER_RATE:
+		child_1 = parent1
+		child_2 = parent2
+	else:
+		cross_point = cross_points[random.randint(0, len(cross_points) - 1)]
+		for i in range(len(parent1['alleles'])):
+			if i < (cross_point + 1):
+				child_1['alleles'].append(parent1['alleles'][i])
+				child_2['alleles'].append(parent2['alleles'][i])
+			else:
+				child_1['alleles'].append(parent2['alleles'][i])
+				child_2['alleles'].append(parent1['alleles'][i])
 
-	for i in range(len(parent1['alleles'])):
-		if i < cross_point + 1:
-			offspring['alleles'].append(parent1['alleles'][i])
-		else:
-			offspring['alleles'].append(parent2['alleles'][i])
-
-	offspring['fitness'] = get_fitness(offspring['alleles'], puzzle)
-
-	return offspring
+	mutate(child_1)
+	mutate(child_2)
+				
+	child_1['fitness'] = get_fitness(child_1['alleles'], puzzle)
+	child_2['fitness'] = get_fitness(child_2['alleles'], puzzle)	
+	
+	return [child_1, child_2]
 
 
 # Function which randomly decides whether or not to alter
 # one of the chromosomes alleles. Should only happen rarely
 def mutate(chromosome):
 	random.seed()
-	match = 1
 	return_val = False
+	mutate_test = random.uniform(0, 1)
 
-	if random.randint(1, 100) == match: # 1% chance of a mututation
+	if  mutate_test < MUTATION_RATE:
 		i = random.randint(0, len(chromosome['alleles']) -2)
-		if chromosome['alleles'][i] == 0:   # if the allele is a 0 we can just flip it to a 1 now worries
+		if chromosome['alleles'][i] == 0:   # if the allele is a 0 we can just flip it to a 1 no worries
 			chromosome['alleles'][i] = 1
 			return_val = True
 		else: # if it's a 1 we need to make sure the adjacent alleles are also 1 in order to flip to zero
@@ -175,17 +206,17 @@ def get_fitness(alleles, puzzle):
 	return fittness_count
 
 
-# function whcih generates a population of chromosomes
+# function which generates a population of chromosomes
 # of size pop_size and populates the alleles of each
 # chromosome
-def create_random_population(puzzle, pop_size):
+def create_random_population(puzzle):
 	population = []
 	pop_item_length = len(puzzle) -2
 
 	random.seed()
 
-	for length in range(pop_size):
-		chrom = {'alleles' : [], 'fitness': 0}
+	for length in range(INITIAL_POP_SIZE):
+		chrom = {'alleles' : [], 'fitness': 0, 'DOB': 0}
 		for i in range(pop_item_length):
 			bit = random.randint(0, 1)
 			if i > 0 and bit == 0:
@@ -241,10 +272,7 @@ def read_data(input_file):
 def main():
 	num_correct = 0
 	num_total = 0
-	max_pop = 128
-	max_generations = 100
-	min_generations = 25
-	initial_pop = 512
+	
 	# for each puzzle call artificial_selection() and dynamic_programming()
 	#    and print the results
 	if len(sys.argv) > 1:
@@ -264,9 +292,9 @@ def main():
 
 			print('________________________________________\nGA Solution')
 			pop_size = 2 ** (len(puzzle) - 2)
-			if pop_size > max_pop:
-				pop_size = max_pop
-			most_fit = artificial_selection(create_random_population(puzzle, initial_pop), puzzle, max_generations, min_generations, pop_size)
+			if pop_size > MAX_POP_SIZE:
+				pop_size = MAX_POP_SIZE
+			most_fit = artificial_selection(create_random_population(puzzle), puzzle, pop_size)
 			print('Cost: ' + str(most_fit['fitness']))
 			print_path(puzzle, most_fit['alleles'])
 
