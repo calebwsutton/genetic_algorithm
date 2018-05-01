@@ -6,56 +6,45 @@
 import sys
 import random
 import jump_it_DP
-
-
-
-###############################################################################
-# This is just a quick skeleton I typed up, we will probably have to make some
-# structural changes to it, but I think it basically plans out everything we
-# need to implement. 
-# 
-# We still need to decide on a selection mechanism for choosing parents, a
-# selection mechanism for choosing which chromosomes to kill, and a fitness
-# function
-###############################################################################
-
-
+import time
 
 # Main function executing the genetic algorithm for each puzzle
 # should return the most fit chromosome after a specified number
 # of generations
-#
-# Function outline:
-#    For each generation
-#         select parents and generate offspring
-#         population = population + offspring
-#         select survivors from population(keep population a consistant size)
-#         population = survivors        
-#
-def artificial_selection(population, puzzle, num_generations, pop_size):
-
-	for i in range(num_generations):
-		for _ in range(pop_size//2): # increase population by 50%
+def artificial_selection(population, puzzle, max_generations, min_generations, pop_size):
+	generation_num = 1
+	fitness_streak = 0
+	current_most_fit = population[0]
+	previous_most_fit = population[0]
+	while generation_num <= max_generations and (generation_num <= min_generations or (fitness_streak/generation_num) < 0.5):
+		previous_most_fit = current_most_fit
+		new_generation = []
+		for _ in range(pop_size//2): # double population
 			parent1, parent2 = select_parents(population)
-			#print(parent1)
-			population.append(crossover(parent1, parent2, puzzle))
+			new_generation.append(crossover(parent1, parent2, puzzle))
+			new_generation.append(crossover(parent2, parent1, puzzle))
+		population = population + new_generation
 		while len(population) != pop_size:
-			kill_unfit(population)
-
-	# determine most fit chomosome
-	most_fit = population[0]
-
-	for chromosome in population:
-		if chromosome['fitness'] < most_fit['fitness']:
-			most_fit = chromosome
+			reduce_pop(population)
 
 
-	return most_fit
+		for chromosome in population:
+			if chromosome['fitness'] < current_most_fit['fitness']:
+				current_most_fit = chromosome
+
+		if current_most_fit['fitness'] == previous_most_fit['fitness']:
+			fitness_streak += 1
+
+		generation_num += 1
+
+	#print('Total Generations: ' + str(generation_num - 1))
+
+	return current_most_fit
 
 
 # Function which chooses a chromosome using the roulette wheel
 # selection mechanism and removes it from the population
-def kill_unfit(population):
+def reduce_pop(population):
 	total_cost = 0
 	selection_pool = []
 
@@ -98,15 +87,8 @@ def select_parents(population):
 	previous_chance = 0
 	for chrom in population:
 		chance = (1/chrom['fitness']) / total_fitness # this is the percentage chance each chromosome will be selected
-		selection_pool.append({'chance': chance, 'chromosome': chrom,'window': [previous_chance, previous_chance + chance]})	# each chromosome is given a window to get selected that lies somewhere in the range of 0 - 1.
-																																# The windows should not overlap and each should be proportional to the chance of getting
-																																# selected, so that when a random float is generated bewteen 0 - 1 it will fall into the window of
-																																# one of the chromosomes in the selection pool.
-
-																																# ie one might be 0.0 - 0.2, the next might be 0.2 - 0.21, then 0.21-0.7, etc......
-
+		selection_pool.append({'chance': chance, 'chromosome': chrom,'window': [previous_chance, previous_chance + chance]})
 		previous_chance += chance
-
 
 	selector1 = random.uniform(0, 1)    # generate a random number that will choose a parent
 	selector2 = random.uniform(0, 1)
@@ -114,7 +96,6 @@ def select_parents(population):
 
 	for chrom in selection_pool:
 		if selector1 > chrom['window'][0] and selector1 < chrom['window'][1]:
-			#print('MATCHED 1!: ' + str(chrom['chromosome']))
 			while selector2 >= chrom['window'][0] and selector2 < chrom['window'][1]:    # as long as the second selector fall with in the selection of range of the first parent generate a new random selector
 																						# the point of this is so both of the parents arent the same chromosome
 				selector2 = random.uniform(0, 1)
@@ -123,13 +104,9 @@ def select_parents(population):
 
 	for chrom in selection_pool:
 		if selector2 >= chrom['window'][0] and selector2 < chrom['window'][1]:
-			#print('MATCHED 2!: ' + str(chrom['chromosome']))
 			parent2 = chrom['chromosome']
 			selection_pool.remove(chrom)
 
-	# print(parent1)
-	# print(parent2)
-	
 	return(parent1, parent2)
 
 
@@ -141,7 +118,6 @@ def select_parents(population):
 # Note: need to be careful about bug which could produce
 #    a chromosome with consecutive 0s
 def crossover(parent1, parent2, puzzle):
-	#Sprint(parent1)
 	cross_point = random.randint(0, len(parent1['alleles']) - 2)
 	offspring = {'alleles': [], 'fitness': 0}
 
@@ -154,8 +130,6 @@ def crossover(parent1, parent2, puzzle):
 		else:
 			offspring['alleles'].append(parent2['alleles'][i])
 
-	mutate(offspring)
-
 	offspring['fitness'] = get_fitness(offspring['alleles'], puzzle)
 
 	return offspring
@@ -165,25 +139,25 @@ def crossover(parent1, parent2, puzzle):
 # one of the chromosomes alleles. Should only happen rarely
 def mutate(chromosome):
 	random.seed()
-	match = 13
+	match = 1
 	return_val = False
 
-	for i in range(len(chromosome['alleles'])):
-		if random.randint(0, 99) == match: # 1% chance of a mututation for each allele
-			if chromosome['alleles'][i] == 0:   # if the allele is a 0 we can just flip it to a 1 now worries
-				chromosome['alleles'][i] = 1
-				return_val = True
-			else: # if it's a 1 we need to make sure the adjacent alleles are also 1 in order to flip to zero
-				if i == 0 and i + 1 < len(chromosome['alleles']):   # Case: first allele
-					if  chromosome['alleles'][i + 1] == 1:          # Only Check the next allele
-						chromosome['alleles'][i] = 0
-						return_val = True
-				elif i == len(chromosome['alleles']) - 1:           # Case: last allele cannot be 0
-					chromosome['alleles'][i] = 1
-					return_val = False
-				elif chromosome['alleles'][i + 1] == 1 and chromosome['alleles'][i - 1] == 1:   # Case: Somewhere in middle, check previous and next allele
+	if random.randint(1, 100) == match: # 1% chance of a mututation
+		i = random.randint(0, len(chromosome['alleles']) -2)
+		if chromosome['alleles'][i] == 0:   # if the allele is a 0 we can just flip it to a 1 now worries
+			chromosome['alleles'][i] = 1
+			return_val = True
+		else: # if it's a 1 we need to make sure the adjacent alleles are also 1 in order to flip to zero
+			if i == 0 and i + 1 < len(chromosome['alleles']):   # Case: first allele
+				if  chromosome['alleles'][i + 1] == 1:          # Only Check the next allele
 					chromosome['alleles'][i] = 0
 					return_val = True
+			elif i == len(chromosome['alleles']) - 1:           # Case: last allele cannot be 0
+				chromosome['alleles'][i] = 1					# should never get here....
+				return_val = False
+			elif chromosome['alleles'][i + 1] == 1 and chromosome['alleles'][i - 1] == 1:   # Case: Somewhere in middle, check previous and next allele
+				chromosome['alleles'][i] = 0
+				return_val = True
 
 	return return_val
 
@@ -224,27 +198,11 @@ def create_random_population(puzzle, pop_size):
 
 		chrom['alleles'].append(1) # The last place in the bitstring is always visited
 
-		# if chrom in population:
-		#     continue
-		# else:
-
 		chrom['fitness'] = get_fitness(chrom['alleles'], puzzle)
 		population.append(chrom)
 
-	# print ("\nChromosome:     Fitness:")
-
-	# for item in population:
-	#     item.append(1)      # The last place in the bitstring is always visited
-	#     fitness = get_fitness(item, puzzle)
-
-	#     #Not actually saving the fitness value, just printing.
-	#     print (item, fitness)
-		
-	# create list of chromosomes
-	# {alleles: [], fitness: int(total cost)}
-	# print (population)
-
 	return population
+
 
 def print_path(puzzle, alleles):
 	i = 1
@@ -281,40 +239,48 @@ def read_data(input_file):
 # function which calls artificial_selection() and dynamic_programming()
 # for each puzzle and prints the results to the console
 def main():
-
+	num_correct = 0
+	num_total = 0
+	max_pop = 128
+	max_generations = 100
+	min_generations = 25
+	initial_pop = 512
 	# for each puzzle call artificial_selection() and dynamic_programming()
 	#    and print the results
 	if len(sys.argv) > 1:
-		# global cost, path
+		initial_time = time.time()
 
 		input_file_name = sys.argv[1]                    # Accepts filename as cmd line argument
 		input_table = read_data(input_file_name)
 		for puzzle in input_table:
 			print('\n\nGame Board: ' + str(puzzle))
 
-
-
-
 			print('________________________________________\nDP Solution')
 			cost = [0] * len(puzzle) #create the cache table
 			path = cost[:] # create a table for path that is identical to path
 			min_cost = jump_it_DP.jumpIt(puzzle, cost, path)
-			print("cost: ", min_cost)
+			print("cost: " + str(min_cost))
 			jump_it_DP.displayPath(puzzle, path)
-
-
-
 
 			print('________________________________________\nGA Solution')
 			pop_size = 2 ** (len(puzzle) - 2)
-			if pop_size > 512:
-				pop_size = 512
-			most_fit = artificial_selection(create_random_population(puzzle, pop_size), puzzle, 25, pop_size)
+			if pop_size > max_pop:
+				pop_size = max_pop
+			most_fit = artificial_selection(create_random_population(puzzle, initial_pop), puzzle, max_generations, min_generations, pop_size)
 			print('Cost: ' + str(most_fit['fitness']))
 			print_path(puzzle, most_fit['alleles'])
 
 			print('========================================')
-			
+
+			if int(min_cost) == int(most_fit['fitness']):
+				num_correct += 1
+
+			num_total += 1
+
+		final_time = time.time()
+
+		print('\n\n\nGA accuracy: ' + str((num_correct/num_total) * 100) + '%')
+		print('Total time elapsed: ' + str(final_time - initial_time))
 
 	else:
 		print ("Please enter the correct cmd line arguments in the format:")
